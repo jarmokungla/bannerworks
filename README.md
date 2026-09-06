@@ -6,9 +6,9 @@ A personal 2D medieval automation game. Build the town, route its materials, and
 
 ## Status
 
-This is a first implementation for playtesting, not yet an iPhone installation package. It contains the Godot project, an interactive scene, a simulation regression suite, and a GitHub workflow for checking the game and exporting a Windows build.
+This is a first implementation for playtesting, with web and Windows exports of the same Godot project. The web workflow includes automatic GitHub Pages deployment once Pages is enabled in the repository. It is not a native iPhone installation package.
 
-On 6 September 2026, GitHub Actions compiled the project with Godot 4.5.2, passed all 49 simulation assertions, opened the main scene headlessly, and produced the Windows executable artifact. Static project/data checks also pass. **Visual inspection, hands-on Windows playtesting, native iPhone testing and physical-device performance profiling are still pending.**
+On 6 September 2026, GitHub Actions compiled the project with Godot 4.5.2, passed all 58 simulation assertions, and produced Windows and web exports. The web game started in Chromium, and its town and menu screenshots were visually inspected. Static project/data checks also pass. **Hands-on Windows playtesting, iPhone Safari testing and physical-device performance profiling are still pending.** Check the latest workflow result for offline-cache checks and deployment status.
 
 ## Open it on Windows
 
@@ -84,15 +84,15 @@ The project lives at [github.com/jarmokungla/bannerworks](https://github.com/jar
 1. Downloads pinned Godot 4.5.2 on a GitHub Linux runner.
 2. Imports/compiles the project, runs simulation regression tests, and opens the main scene headlessly.
 3. Downloads matching export templates and builds a Windows test executable.
-4. Uploads that executable as a private repository Actions artifact.
+4. Uploads that executable as a downloadable Actions artifact. This repository is public; do not put private information in its source or artifacts.
 
 It runs on pushes, pull requests and manual dispatch. Engine errors fail the job even if Godot returns a zero exit code. No Apple credentials are required for this workflow. It does not publish releases or deploy a website. The first fully successful run was build #3 on commit `b2150ed`.
 
-## Getting it onto your iPhone
+## Optional native iPhone version — not needed for web play
 
 GitHub hosts the source and can coordinate builds, but it does not replace Apple's signing process. A native Godot iOS export requires **macOS with Xcode**; a hosted Mac can do that work, so owning a Mac is optional. See [Godot's iOS export requirements](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_ios.html).
 
-After the first engine checks pass:
+If native distribution is chosen later:
 
 1. Choose an Apple development team and a unique bundle identifier.
 2. Configure the iOS export on a Mac or hosted macOS runner, including the Apple Team ID and signing setup.
@@ -145,4 +145,4 @@ This implementation tests the economic loop and interface. The full design remai
 - Border Patrol is a requirements/unlock milestone, not a battle simulation. Soldiers are retained; no wounds or expedition timer yet.
 - Touch drag/drop inside scrolling panels, notch/home-indicator spacing and 60 fps are implemented targets, **not device-verified claims**.
 
-The next useful milestone is hands-on playtesting followed by a native phone test. Those results should guide interface changes before expanding the economy.
+The next useful milestone is hands-on Safari and Home Screen playtesting on the iPhone 15 Pro. Those results should guide interface changes before expanding the economy. Native distribution is optional and not part of the free web workflow.
