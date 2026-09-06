@@ -1,0 +1,14 @@
+.godot/
+build/
+dist/
+*.tmp
+*.log
+*.p12
+*.mobileprovision
+*.p8
+.env
+.env.*
+export_credentials.cfg
+.DS_Store
+__pycache__/
+*.pyc

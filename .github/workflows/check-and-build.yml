@@ -1,0 +1,61 @@
+name: Check and build prototype
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prototype-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  godot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GODOT_VERSION: 4.5.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Godot engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/godot"
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" \
+            -o "$RUNNER_TEMP/godot/engine.zip"
+          unzip -q "$RUNNER_TEMP/godot/engine.zip" -d "$RUNNER_TEMP/godot"
+          mv "$RUNNER_TEMP/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$RUNNER_TEMP/godot/godot"
+          chmod +x "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+      - name: Compile and run regression checks
+        run: python3 tools/run_checks.py
+      - name: Install matching Windows export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" \
+            -o "$RUNNER_TEMP/godot/templates.tpz"
+          unzip -q "$RUNNER_TEMP/godot/templates.tpz" 'templates/windows_debug_x86_64.exe' 'templates/windows_release_x86_64.exe' -d "$RUNNER_TEMP/godot"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$template_dir"
+          cp "$RUNNER_TEMP/godot/templates/"windows_*_x86_64.exe "$template_dir/"
+      - name: Export Windows build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/windows
+          godot --headless --path . --export-debug "Windows Desktop" build/windows/Bannerworks.exe 2>&1 | tee build/export.log
+          test -s build/windows/Bannerworks.exe
+          if grep -E 'SCRIPT ERROR|Parse Error|^ERROR:' build/export.log; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bannerworks-Windows-${{ github.sha }}
+          path: build/windows/
+          if-no-files-found: error
+          retention-days: 14

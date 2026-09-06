@@ -1,0 +1,31 @@
+{
+  "items": {
+    "timber": {"name":"Timber","color":"bb8e5b","stack":50},
+    "food": {"name":"Rations","color":"d9b95c","stack":50},
+    "ore": {"name":"Iron ore","color":"a1b1c3","stack":50},
+    "charcoal": {"name":"Charcoal","color":"6e7c8d","stack":50},
+    "bars": {"name":"Iron bars","color":"c7d7e5","stack":50},
+    "sword": {"name":"Swords","color":"e6dfcb","stack":10},
+    "shield": {"name":"Shields","color":"64b3cc","stack":10}
+  },
+  "buildings": {
+    "hall": {"name":"Town Hall","size":3,"color":"557f96","cost":{"timber":30},"slots":8,"note":"6 rations attract a new peasant every 30 seconds; up to 12 residents."},
+    "farm": {"name":"Farm","size":2,"color":"b5a556","cost":{"timber":12},"slots":4,"recipes":["food"],"note":"Grows rations. Route them to the Town Hall and schools."},
+    "lumber": {"name":"Lumber Camp","size":2,"color":"9c754f","cost":{"timber":10},"slots":4,"recipes":["timber"],"note":"Produces timber. Collect some in your backpack to build."},
+    "mine": {"name":"Iron Mine","size":2,"color":"758b9c","cost":{"timber":16},"slots":4,"recipes":["ore"],"note":"Must touch an iron deposit. Produces iron ore."},
+    "kiln": {"name":"Charcoal Kiln","size":2,"color":"92766a","cost":{"timber":12},"slots":4,"recipes":["charcoal"],"note":"Burns timber into charcoal for smelting."},
+    "smithy": {"name":"Smithy","size":2,"color":"af7961","cost":{"timber":18},"slots":6,"recipes":["bars","sword","shield"],"note":"Choose one recipe per smithy. Add parallel smithies for continuous production."},
+    "barn": {"name":"Warehouse Barn","size":3,"color":"aa7864","cost":{"timber":20,"bars":4},"slots":12,"note":"Local storage only. Deliveries need roads and routes."},
+    "sword_school": {"name":"Sword School","size":3,"color":"547fac","cost":{"timber":24,"bars":4},"slots":6,"skill":"Sword","equipment":"sword","note":"Teaches Sword using 1 sword and 2 rations. Recruit walks here by road."},
+    "shield_school": {"name":"Shield School","size":3,"color":"558e8b","cost":{"timber":24,"bars":6},"slots":6,"skill":"Shield","equipment":"shield","note":"Teaches Shield. A Sword + Shield recruit becomes a Man-at-Arms."}
+  },
+  "recipes": {
+    "timber":{"in":{},"out":{"timber":1},"seconds":5},
+    "food":{"in":{},"out":{"food":1},"seconds":5},
+    "ore":{"in":{},"out":{"ore":1},"seconds":5},
+    "charcoal":{"in":{"timber":1},"out":{"charcoal":1},"seconds":5},
+    "bars":{"in":{"ore":2,"charcoal":1},"out":{"bars":1},"seconds":10},
+    "sword":{"in":{"bars":2,"timber":1},"out":{"sword":1},"seconds":20},
+    "shield":{"in":{"bars":1,"timber":2},"out":{"shield":1},"seconds":15}
+  }
+}
