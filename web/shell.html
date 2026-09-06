@@ -88,7 +88,21 @@
         savePicker.click();
       }
     };
-    const engine = new Engine($GODOT_CONFIG);
+    const config = $GODOT_CONFIG;
+    const engine = new Engine(config);
+    async function prepareOfflineCache() {
+      if (!config.serviceWorker || !('serviceWorker' in navigator)) return;
+      // Claim only a first installation, before the engine downloads its pack.
+      // Never force a waiting update over an already-running town.
+      await navigator.serviceWorker.register(config.serviceWorker);
+      const registration = await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller && registration.active) {
+        await new Promise(resolve => {
+          navigator.serviceWorker.addEventListener('controllerchange', resolve, {once: true});
+          registration.active.postMessage('claim');
+        });
+      }
+    }
     start.addEventListener('click', async () => {
       start.disabled = true;
       start.textContent = 'Opening your town…';
@@ -97,6 +111,15 @@
       try {
         const missing = Engine.getMissingFeatures({threads: false});
         if (missing.length) throw new Error('Your browser is missing: ' + missing.join(', '));
+        // Cache restrictions must not prevent online play.
+        let cacheTimeout;
+        try {
+          await Promise.race([
+            prepareOfflineCache(),
+            new Promise((_, reject) => { cacheTimeout = setTimeout(() => reject(new Error('Offline cache timed out')), 10000); })
+          ]);
+        } catch (error) { console.warn('Offline cache unavailable; online play is still available.', error); }
+        finally { clearTimeout(cacheTimeout); }
         await engine.startGame({
           canvas,
           canvasResizePolicy: 0,
