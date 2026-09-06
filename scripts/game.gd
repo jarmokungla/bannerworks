@@ -10,7 +10,7 @@ var sim = Simulation.new()
 var world
 var mode = "inspect"
 var build_kind = "farm"
-var rotation = 0
+var build_rotation = 0
 var selected_id = 0
 var transfer_amount = 10
 var route_source = 0
@@ -244,7 +244,7 @@ func refresh_build_hint() -> void:
 	var lines = PackedStringArray(["In backpack / Needed"])
 	for item in cost:
 		lines.append("%s: %d / %d" % [sim.data.items[item].name, sim.backpack.get(item, 0), cost[item]])
-	var error = sim.placement_error(build_kind, world.ghost, rotation)
+	var error = sim.placement_error(build_kind, world.ghost, build_rotation)
 	if not error.is_empty():
 		lines.append(error)
 	build_hint.text = "\n".join(lines)
@@ -563,12 +563,12 @@ func _choose_build(kind: String) -> void:
 	notify("Position your building, then tap Place building.")
 
 func _rotate() -> void:
-	rotation = (rotation + 1) % 4
+	build_rotation = (build_rotation + 1) % 4
 	refresh_build_hint()
 	world.queue_redraw()
 
 func _place() -> void:
-	var error = sim.place(build_kind, world.ghost, rotation)
+	var error = sim.place(build_kind, world.ghost, build_rotation)
 	notify("Building placed. Connect its gold gate by road." if error == "" else error)
 	refresh_live_ui()
 	world.queue_redraw()

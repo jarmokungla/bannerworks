@@ -218,12 +218,12 @@ func _draw() -> void:
 		draw_rect(Rect2(to_screen(Vector2(tile) * TILE), Vector2.ONE * scale_tile), Color(0.9, 0.78, 0.4, 0.5))
 	if game.mode == "build":
 		var n = int(sim.data.buildings[game.build_kind].size)
-		var valid = sim.placement_error(game.build_kind, ghost, game.rotation).is_empty() and sim.can_pay(sim.backpack, sim.data.buildings[game.build_kind].cost)
+		var valid = sim.placement_error(game.build_kind, ghost, game.build_rotation).is_empty() and sim.can_pay(sim.backpack, sim.data.buildings[game.build_kind].cost)
 		var color = Color("6fe5bd") if valid else Color("ee8c79")
 		var rect = Rect2(to_screen(Vector2(ghost) * TILE), Vector2.ONE * n * scale_tile)
 		draw_rect(rect, Color(color, 0.3))
 		draw_rect(rect.grow(-1), color, false, 2)
-		var probe = {"kind":game.build_kind, "x":ghost.x, "y":ghost.y, "rotation":game.rotation}
+		var probe = {"kind":game.build_kind, "x":ghost.x, "y":ghost.y, "rotation":game.build_rotation}
 		var gate = to_screen((Vector2(sim.port(probe)) + Vector2.ONE * 0.5) * TILE)
 		draw_circle(gate, 5, color)
 
