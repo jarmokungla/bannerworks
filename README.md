@@ -19,6 +19,20 @@ On 6 September 2026, GitHub Actions compiled the project with Godot 4.5.2, passe
 
 The successful GitHub workflow's `Bannerworks-Windows-…` artifact provides an executable instead. Extract the artifact before running it.
 
+## Play in your iPhone browser — free
+
+The **Build and publish web game** workflow exports the same Godot game to WebAssembly/WebGL 2 with threading disabled, then runs browser smoke checks and deploys it to GitHub Pages. No Apple account, signing certificate, Mac or paid hosting is required for this route. Native export remains available later.
+
+One-time repository setting: **Settings → Pages → Build and deployment → Source → GitHub Actions**. The deployment job deliberately does not attempt to grant itself repository-administration access. If Pages isn't enabled, the game still builds and its downloadable web artifact remains available; enable Pages and rerun the failed deployment job.
+
+After deployment succeeds, open the page URL reported in the workflow's `github-pages` environment using Safari. Tap **Enter your town**. For an app-like experience, use **Share → Add to Home Screen**, then launch it from that icon. Keep the phone upright.
+
+The PWA service worker caches the game after its first complete online load. Offline availability is not permanent: iOS may evict caches, and clearing website data may remove your save. Normal Safari and the Home Screen app may also use separate storage, so choose one for your ongoing town.
+
+Use **Menu → Download save backup** to keep `bannerworks-save.json` in Files. To move or recover a town, choose **Menu → Import save backup…**, select the file and confirm replacement. Import is validated before the current town changes. These backups never leave your device unless you choose to share them.
+
+The web export has a custom loading screen, safe-area-aware page, touch canvas, capped backing resolution, portrait guidance and single-threaded PWA support. A Chromium browser smoke test captures real game screenshots during the workflow. Native iPhone Safari performance and gestures still need testing on the actual phone; a green desktop-browser test does not guarantee them.
+
 ## What is implemented
 
 - A 36 × 36 overhead grid with forest edges, a river, an iron deposit, original code-drawn building art and visible carts/residents.

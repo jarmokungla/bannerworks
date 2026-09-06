@@ -10,6 +10,7 @@ func _initialize() -> void:
 	test_delivery_conservation()
 	test_training_identity()
 	test_save_recovery()
+	test_portable_backup()
 	test_refund_and_pause()
 	print("Bannerworks: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -159,3 +160,29 @@ func test_refund_and_pause() -> void:
 	sim.backpack.clear()
 	check(sim.collect_crate(Vector2i(9, 15)) == 32, "Crate returns contents and full construction cost")
 	check(sim.crates.is_empty(), "Empty pickup crate removed")
+
+func test_portable_backup() -> void:
+	var sim = Simulation.new()
+	sim.new_game()
+	advance(sim, 3)
+	var backup = SaveStore.encode_state(sim)
+	var decoded = SaveStore.decode_state(backup, sim.data)
+	check(not decoded.is_empty(), "Portable backup validates")
+	var restored = Simulation.new()
+	check(restored.restore(decoded), "Portable backup restores")
+	check(total(restored, "food") == total(sim, "food"), "Portable backup preserves moving cargo")
+	check(SaveStore.decode_state("truncated", sim.data).is_empty(), "Malformed import is rejected quietly")
+	var envelope = JSON.parse_string(backup)
+	envelope.sha256 = "invalid-checksum"
+	check(SaveStore.decode_state(JSON.stringify(envelope), sim.data).is_empty(), "Modified backup is rejected")
+	var before = sim.snapshot()
+	check(SaveStore.decode_state("{}", sim.data).is_empty() and sim.snapshot() == before, "Invalid import cannot mutate current town")
+	var overflow = sim.snapshot()
+	overflow.backpack = {"timber":10000}
+	check(not SaveStore.valid_state(overflow, sim.data), "Imported backpack cannot exceed capacity")
+	var negative = sim.snapshot()
+	negative.backpack.timber = -1
+	check(not SaveStore.valid_state(negative, sim.data), "Imported quantities cannot be negative")
+	var bad_path = sim.snapshot()
+	bad_path.routes[0].path = ["not-a-tile"]
+	check(not SaveStore.valid_state(bad_path, sim.data), "Imported routes cannot contain malformed tiles")

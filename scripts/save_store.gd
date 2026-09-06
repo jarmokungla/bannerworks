@@ -3,9 +3,12 @@ extends RefCounted
 
 const SAVE_PATH = "user://bannerworks.json"
 
-static func save_game(simulation, path: String = SAVE_PATH) -> Error:
+static func encode_state(simulation) -> String:
 	var payload = JSON.stringify(simulation.snapshot())
-	var envelope = JSON.stringify({"sha256":payload.sha256_text(), "payload":payload})
+	return JSON.stringify({"sha256":payload.sha256_text(), "payload":payload})
+
+static func save_game(simulation, path: String = SAVE_PATH) -> Error:
+	var envelope = encode_state(simulation)
 	var temp = path + ".tmp"
 	var file = FileAccess.open(temp, FileAccess.WRITE)
 	if file == null:
@@ -32,8 +35,13 @@ static func load_game(simulation, path: String = SAVE_PATH) -> String:
 static func read_state(path: String, data: Dictionary) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
+	return decode_state(FileAccess.get_file_as_string(path), data)
+
+static func decode_state(text: String, data: Dictionary) -> Dictionary:
+	if text.length() > 2 * 1024 * 1024:
+		return {}
 	var envelope_parser = JSON.new()
-	if envelope_parser.parse(FileAccess.get_file_as_string(path)) != OK:
+	if envelope_parser.parse(text) != OK:
 		return {}
 	var envelope = envelope_parser.data
 	if not envelope is Dictionary:
@@ -78,6 +86,12 @@ static func valid_path(value, roads: Dictionary) -> bool:
 			return false
 	return true
 
+static func fits_inventory(inventory: Dictionary, data: Dictionary, capacity: int) -> bool:
+	var slots = 0
+	for item in inventory:
+		slots += int(ceil(float(inventory[item]) / float(data.items[item].stack)))
+	return slots <= capacity
+
 static func valid_state(state: Dictionary, data: Dictionary) -> bool:
 	if not has_keys(state, ["version", "buildings", "roads", "routes", "people", "backpack",
 		"crates", "next_id", "next_person", "elapsed", "mission_complete", "paused"]):
@@ -86,7 +100,11 @@ static func valid_state(state: Dictionary, data: Dictionary) -> bool:
 		return false
 	if not state.routes is Array or not state.people is Array or not state.crates is Array:
 		return false
+	if state.buildings.size() > 512 or state.roads.size() > 1296 or state.routes.size() > 2048 or state.people.size() > 12 or state.crates.size() > 2048:
+		return false
 	if not valid_inventory(state.backpack, data) or not integer(state.next_id) or not integer(state.next_person):
+		return false
+	if not fits_inventory(state.backpack, data, 12):
 		return false
 	if not nonnegative_number(state.elapsed):
 		return false
@@ -100,6 +118,8 @@ static func valid_state(state: Dictionary, data: Dictionary) -> bool:
 		if not integer(building.id) or building.id <= 0 or ids.has(building.id) or not data.buildings.has(building.kind):
 			return false
 		if not valid_inventory(building.inventory, data):
+			return false
+		if not fits_inventory(building.inventory, data, int(data.buildings[building.kind].slots)):
 			return false
 		for key in ["x", "y", "rotation", "training_person"]:
 			if not integer(building[key]):
@@ -121,6 +141,8 @@ static func valid_state(state: Dictionary, data: Dictionary) -> bool:
 		var parts = key.split(",")
 		if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
 			return false
+		if int(parts[0]) < 0 or int(parts[0]) >= 36 or int(parts[1]) < 0 or int(parts[1]) >= 36:
+			return false
 	for route in state.routes:
 		if not route is Dictionary or not has_keys(route, ["source", "target", "item", "path", "position", "cargo", "returning", "wait", "enabled", "status"]):
 			return false
@@ -133,6 +155,9 @@ static func valid_state(state: Dictionary, data: Dictionary) -> bool:
 			return false
 		for key in route.path:
 			if not key is String:
+				return false
+			var parts = key.split(",")
+			if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
 				return false
 		if route.cargo > 0 or route.position > 0:
 			if not valid_path(route.path, state.roads) or route.path.is_empty():
@@ -147,6 +172,14 @@ static func valid_state(state: Dictionary, data: Dictionary) -> bool:
 			return false
 		if not person.name is String or not person.skills is Array or not person.gear is Array:
 			return false
+		if person.skills.size() > 2 or person.gear.size() > 2:
+			return false
+		for skill in person.skills:
+			if skill not in ["Sword", "Shield"] or person.skills.count(skill) > 1:
+				return false
+		for item in person.gear:
+			if item not in ["sword", "shield"]:
+				return false
 		if not nonnegative_number(person.position) or not integer(person.location) or not integer(person.destination):
 			return false
 		if not valid_path(person.path, state.roads):

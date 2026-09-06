@@ -35,6 +35,7 @@ var inventory_buttons: Array = []
 var build_hint: Label
 var save_status = ""
 var ui_queued = false
+var import_callback
 
 func _ready() -> void:
 	Engine.max_fps = 60
@@ -46,12 +47,19 @@ func _ready() -> void:
 		# Do not overwrite an unrecognized save. The player must explicitly choose New town.
 		saving_enabled = loaded != "invalid"
 	make_ui()
+	if OS.has_feature("web"):
+		import_callback = JavaScriptBridge.create_callback(_on_import_chosen)
+		var browser_api = JavaScriptBridge.get_interface("Bannerworks")
+		if browser_api != null:
+			browser_api.markReady()
 	if loaded == "invalid":
 		notify("Save unreadable; using a temporary town. New town explicitly replaces it.")
 	elif loaded == "backup":
 		notify("Recovered your previous save.")
 	else:
 		notify("Tap buildings to inspect. Drag the map; pinch to zoom.")
+	if OS.has_feature("web") and not OS.is_userfs_persistent():
+		notify("Browser storage is unavailable. Use Menu → Download save backup before closing.")
 	if "--smoke-test" in OS.get_cmdline_user_args():
 		await get_tree().create_timer(2.0).timeout
 		get_tree().quit()
@@ -90,7 +98,7 @@ func make_ui() -> void:
 	add_child(margin)
 	var safe_top = 14
 	var safe_bottom = 14
-	if OS.has_feature("ios"):
+	if OS.has_feature("ios") and not OS.has_feature("web"):
 		var safe = DisplayServer.get_display_safe_area()
 		var physical = DisplayServer.window_get_size()
 		if physical.y > 0:
@@ -363,6 +371,12 @@ func build_backpack() -> void:
 func build_menu() -> void:
 	label("Prototype 0.1 · Godot\nOffline simulation pauses when the app is inactive. Saves every 30 seconds and on app pause.", content)
 	button("Save now", content, _save_now)
+	if OS.has_feature("web"):
+		button("Download save backup", content, _export_backup)
+		button("Import save backup…", content, _import_backup)
+		label("Browser saves belong to this device and site. Keep a downloaded backup before clearing Safari data or switching devices. Offline play needs one full online load first.", content, 12)
+		if JavaScriptBridge.pwa_needs_update():
+			label("An updated game is ready. Download a backup, close every game tab and reopen to update safely.", content, 12)
 	button("Center on Town Hall", content, _center_town)
 	button("How to play", content, _help)
 	button("New town…", content, _confirm_reset)
@@ -427,8 +441,55 @@ func write_save(show_message: bool) -> void:
 	var result = SaveStore.save_game(sim)
 	if result != OK:
 		notify("Could not save (%s). Keep the game open and try again." % error_string(result))
-	elif show_message:
-		notify("Town saved on this device.")
+	else:
+		if OS.has_feature("web"):
+			JavaScriptBridge.force_fs_sync()
+		if show_message:
+			notify("Town saved on this device.")
+
+func _export_backup() -> void:
+	if not OS.has_feature("web"):
+		return
+	var encoded = SaveStore.encode_state(sim)
+	JavaScriptBridge.download_buffer(encoded.to_utf8_buffer(), "bannerworks-save.json", "application/json")
+	notify("Backup download requested. On iPhone, keep it in Files.")
+
+func _import_backup() -> void:
+	var browser_api = JavaScriptBridge.get_interface("Bannerworks")
+	if browser_api != null:
+		browser_api.chooseSave(import_callback)
+
+func _on_import_chosen(arguments: Array) -> void:
+	if arguments.size() == 2:
+		_offer_import.call_deferred(str(arguments[0]), str(arguments[1]))
+
+func _offer_import(encoded: String, error: String) -> void:
+	if error != "":
+		notify(error)
+		return
+	var state = SaveStore.decode_state(encoded, sim.data)
+	if state.is_empty():
+		notify("Not a valid Bannerworks backup. Your current town has not changed.")
+		return
+	var dialog = ConfirmationDialog.new()
+	dialog.title = "Restore this backup?"
+	dialog.dialog_text = "Replace this town with the backup's %d buildings and %d residents? Download a backup of this town first if you want to keep both." % [state.buildings.size(), state.people.size()]
+	dialog.dialog_autowrap = true
+	add_child(dialog)
+	dialog.confirmed.connect(_accept_import.bind(state))
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.popup_centered(Vector2i(340, 230))
+
+func _accept_import(state: Dictionary) -> void:
+	if not sim.restore(state):
+		notify("Backup could not be restored. Your town has not changed.")
+		return
+	saving_enabled = true
+	selected_id = 0
+	accumulator = 0.0
+	_center_town()
+	write_save(true)
 
 func map_tap(tile: Vector2i) -> void:
 	if mode == "erase":
