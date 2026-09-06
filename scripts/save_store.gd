@@ -32,14 +32,20 @@ static func load_game(simulation, path: String = SAVE_PATH) -> String:
 static func read_state(path: String, data: Dictionary) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
-	var envelope = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var envelope_parser = JSON.new()
+	if envelope_parser.parse(FileAccess.get_file_as_string(path)) != OK:
+		return {}
+	var envelope = envelope_parser.data
 	if not envelope is Dictionary:
 		return {}
 	if not envelope.get("payload") is String or not envelope.get("sha256") is String:
 		return {}
 	if envelope.payload.sha256_text() != envelope.sha256:
 		return {}
-	var state = JSON.parse_string(envelope.payload)
+	var state_parser = JSON.new()
+	if state_parser.parse(envelope.payload) != OK:
+		return {}
+	var state = state_parser.data
 	if not state is Dictionary or not valid_state(state, data):
 		return {}
 	return state
